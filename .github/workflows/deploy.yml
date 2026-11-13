@@ -1,0 +1,38 @@
+name: Deploy to Raspberry Pi
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Trigger Remote Update
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Send Deploy Webhook
+        env:
+          DEPLOY_URL: ${{ secrets.DEPLOY_URL }}
+          DEPLOY_SECRET: ${{ secrets.DEPLOY_SECRET }}
+        run: |
+          if [ -z "$DEPLOY_URL" ] || [ -z "$DEPLOY_SECRET" ]; then
+            echo "Error: DEPLOY_URL or DEPLOY_SECRET is not configured in GitHub Secrets."
+            exit 1
+          fi
+
+          echo "Triggering deployment webhook on Raspberry Pi..."
+          HTTP_STATUS=$(curl -s -o response.txt -w "%{http_code}" -X POST "$DEPLOY_URL" \
+            -H "Authorization: Bearer $DEPLOY_SECRET" \
+            --connect-timeout 15 \
+            --max-time 30)
+
+          cat response.txt
+          echo ""
+
+          if [ "$HTTP_STATUS" -ne 200 ]; then
+            echo "Deployment failed with HTTP status $HTTP_STATUS"
+            exit 1
+          fi
+
+          echo "Deployment successfully triggered on the Raspberry Pi!"
